@@ -1,0 +1,666 @@
+---
+title: "Project 2 - Tidying Data"
+author: "Julia Ferris"
+date: "2023-10-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(janitor)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+```
+
+## Dataset 1 - Hospital Data
+
+The data was originally located here: <https://data.chhs.ca.gov/dataset/emergency-department-services-trends/resource/a05be197-1cea-4685-9dfd-0afc7712f81f?view_id=731e02a2-86f4-4f48-952c-b7af2f1fc190>
+
+### Part 1 - Compare EMS Admissions for cases with different levels of severity
+
+How I cleaned and analyzed the data:
+
+-   First, the rows I did not need were removed, and a new data frame was created with the specific rows I needed for the question. Then, the first row of the new data frame was used as the header.
+
+-   I renamed the columns by year to make the data clearer.
+
+-   I removed the first row because it did not have useful information.
+
+-   I split the data into two new data sets, one for numbers and one for percents.
+
+-   I lengthened the data to make it tidy by using pivot_longer().
+
+-   I removed the % symbol and , (comma) symbol from the appropriate columns because they would affect calculations in the future.
+
+-   I created a final data frame about EMS admissions to use for the question
+
+-   I fixed the names of each type of EMS Admission because it made the names on the x-axis in future graphs easier to read.
+
+-   Then, I created plots for each year using ggplot(). I created plots for numbers and percents for practice.
+
+Conclusion: EMS Admissions appeared to have a clear pattern. Every year, the majority of admissions were patients who were severe with a life-threatening condition. This makes sense because the patients were admitted to an emergency room, and most emergency medical facilities treat patients with severe life-threatening problems. The graphs show both the quantities of patients and the percentages of patients at each level for comparison. The left graphs show quantities. The right graphs show percentages.
+
+```{r hospital-emergency-departments, fig.show="hold", out.width="50%"}
+hospitalData <- read.csv("https://raw.githubusercontent.com/juliaDataScience-22/cuny-fall-23/Project-2/project2-data1.csv")
+hospitalData <- hospitalData[-1:-12,]
+emsAdmissions <- hospitalData[43:50,]
+emsAdmissions <- emsAdmissions |> row_to_names(row_number = 1)
+colnames(emsAdmissions)[3] <- "2013"
+colnames(emsAdmissions)[5] <- "2014"
+colnames(emsAdmissions)[7] <- "2015"
+colnames(emsAdmissions)[9] <- "2016"
+colnames(emsAdmissions)[11] <- "2017"
+
+emsAdmissions <- emsAdmissions[-1,]
+
+numbers <- emsAdmissions[,c(1,2,4,6,8,10)]
+percents <- emsAdmissions[,c(1,3,5,7,9,11)]
+
+library(tidyr)
+numbers <- pivot_longer(numbers, 
+             cols = c("2013", "2014", "2015", "2016", "2017"),
+             names_to = "year",
+             values_to = "number")
+percents <- pivot_longer(percents, 
+             cols = c("2013", "2014", "2015", "2016", "2017"),
+             names_to = "year",
+             values_to = "percent")
+
+percents$percent <- gsub("%","",percents$percent)
+numbers$number <- gsub(",", "", numbers$number)
+
+ems_admissions <- data.frame(ems_admissions = numbers$` EMS Admissions`,
+                                    year = numbers$year,
+                                    number = as.numeric(numbers$number),
+                                    percent = as.numeric(percents$percent))
+ems_admissions$ems_admissions <- gsub("\\(CPT 99281\\)", "", ems_admissions$ems_admissions)
+ems_admissions$ems_admissions <- gsub("CPT 99282)", "", ems_admissions$ems_admissions)
+ems_admissions$ems_admissions <- gsub("\\(CPT 99283\\)", "", ems_admissions$ems_admissions)
+ems_admissions$ems_admissions <- gsub("\\(CPT 99284\\)", "", ems_admissions$ems_admissions)
+ems_admissions$ems_admissions <- gsub("\\(CPT 99285\\)", "", ems_admissions$ems_admissions)
+ems_admissions$ems_admissions <- gsub("by Type\\*", "", ems_admissions$ems_admissions)
+ems_admissions$ems_admissions <- gsub("Admissions", "", ems_admissions$ems_admissions)
+
+
+thirteen <- ems_admissions |> filter(year == 2013)
+ggplot(thirteen, aes(ems_admissions, number)) +
+  geom_col() +
+  labs(title = "2013 EMS Admissions by Number")
+ggplot(thirteen, aes(ems_admissions, percent)) +
+  geom_col() +
+  labs(title = "2013 EMS Admissions by Percent")
+
+fourteen <- ems_admissions |> filter(year == 2014)
+ggplot(fourteen, aes(ems_admissions, number)) +
+  geom_col() +
+  labs(title = "2014 EMS Admissions by Number")
+ggplot(fourteen, aes(ems_admissions, percent)) +
+  geom_col() +
+  labs(title = "2014 EMS Admissions by Percent")
+
+fifteen <- ems_admissions |> filter(year == 2015)
+ggplot(fifteen, aes(ems_admissions, number)) +
+  geom_col() +
+  labs(title = "2015 EMS Admissions by Number")
+ggplot(fifteen, aes(ems_admissions, percent)) +
+  geom_col() +
+  labs(title = "2015 EMS Admissions by Percent")
+
+sixteen <- ems_admissions |> filter(year == 2016)
+ggplot(sixteen, aes(ems_admissions, number)) +
+  geom_col() +
+  labs(title = "2016 EMS Admissions by Number")
+ggplot(sixteen, aes(ems_admissions, percent)) +
+  geom_col() +
+  labs(title = "2016 EMS Admissions by Percent")
+
+seventeen <- ems_admissions |> filter(year == 2017)
+ggplot(seventeen, aes(ems_admissions, number)) +
+  geom_col() +
+  labs(title = "2017 EMS Admissions by Number")
+ggplot(seventeen, aes(ems_admissions, percent)) +
+  geom_col() +
+  labs(title = "2017 EMS Admissions by Percent")
+
+```
+
+### Part 2 - Compare the 24-hour services offered by the emergency department over the five years by percentages
+
+How I cleaned and analyzed the data:
+
+-   First, I created a new data frame with the specific rows I needed for the question. Then, the first row of the new data frame was used as the header.
+
+-   I renamed the columns by year to make the data clearer.
+
+-   I removed the first row because it did not have useful information.
+
+-   I removed the columns that contained information about on-call services because it was not related to the question.
+
+-   I lengthened the data to make it tidy by using pivot_longer().
+
+-   I filtered the information by year to then calculate percentages and saved information for each year to a different vector.
+
+-   Then I calculated the percentage of people who used each service for all the years.
+
+-   I created a new data frame with all the new information including the percentages.
+
+-   Lastly, I used ggplot() to create graphs for the percentages of services for each year.
+
+Conclusion: All of the 24-hour services remained consistent by percent over the years. The service used the most each year was "Physician," and the service that came in a close second was "Laboratory Services."
+
+```{r hospital-services-available, fig.show="hold", out.width="33%"}
+services <- hospitalData[19:27,]
+
+services <- services |> row_to_names(row_number = 1)
+colnames(services)[3] = "2013"
+colnames(services)[5] = "2014"
+colnames(services)[7] = "2015"
+colnames(services)[9] = "2016"
+colnames(services)[11] = "2017"
+
+services <- services[-1,]
+
+services <- services[,c(1,2,4,6,8,10)]
+
+library(tidyr)
+services <- pivot_longer(services, 
+             cols = c("2013", "2014", "2015", "2016", "2017"),
+             names_to = "year",
+             values_to = "twenty_four_hour")
+
+
+thirteen <- services |> filter(year == "2013")
+fourteen <- services |> filter(year == "2014")
+fifteen <- services |> filter(year == "2015")
+sixteen <- services |> filter(year == "2016")
+seventeen <- services |> filter(year == "2017")
+
+"services2013" <- c(as.numeric(thirteen$twenty_four_hour[1]) / sum(as.numeric(thirteen$twenty_four_hour)),
+                    as.numeric(thirteen$twenty_four_hour[2]) / sum(as.numeric(thirteen$twenty_four_hour)),
+                    as.numeric(thirteen$twenty_four_hour[3]) / sum(as.numeric(thirteen$twenty_four_hour)),
+                    as.numeric(thirteen$twenty_four_hour[4]) / sum(as.numeric(thirteen$twenty_four_hour)),
+                    as.numeric(thirteen$twenty_four_hour[5]) / sum(as.numeric(thirteen$twenty_four_hour)),
+                    as.numeric(thirteen$twenty_four_hour[6]) / sum(as.numeric(thirteen$twenty_four_hour)),
+                    as.numeric(thirteen$twenty_four_hour[7]) / sum(as.numeric(thirteen$twenty_four_hour)))
+"services2014" <- c(as.numeric(fourteen$twenty_four_hour[1]) / sum(as.numeric(fourteen$twenty_four_hour)),
+                    as.numeric(fourteen$twenty_four_hour[2]) / sum(as.numeric(fourteen$twenty_four_hour)),
+                    as.numeric(fourteen$twenty_four_hour[3]) / sum(as.numeric(fourteen$twenty_four_hour)),
+                    as.numeric(fourteen$twenty_four_hour[4]) / sum(as.numeric(fourteen$twenty_four_hour)),
+                    as.numeric(fourteen$twenty_four_hour[5]) / sum(as.numeric(fourteen$twenty_four_hour)),
+                    as.numeric(fourteen$twenty_four_hour[6]) / sum(as.numeric(fourteen$twenty_four_hour)),
+                    as.numeric(fourteen$twenty_four_hour[7]) / sum(as.numeric(fourteen$twenty_four_hour)))
+"services2015" <- c(as.numeric(fifteen$twenty_four_hour[1]) / sum(as.numeric(fifteen$twenty_four_hour)),
+                    as.numeric(fifteen$twenty_four_hour[2]) / sum(as.numeric(fifteen$twenty_four_hour)),
+                    as.numeric(fifteen$twenty_four_hour[3]) / sum(as.numeric(fifteen$twenty_four_hour)),
+                    as.numeric(fifteen$twenty_four_hour[4]) / sum(as.numeric(fifteen$twenty_four_hour)),
+                    as.numeric(fifteen$twenty_four_hour[5]) / sum(as.numeric(fifteen$twenty_four_hour)),
+                    as.numeric(fifteen$twenty_four_hour[6]) / sum(as.numeric(fifteen$twenty_four_hour)),
+                    as.numeric(fifteen$twenty_four_hour[7]) / sum(as.numeric(fifteen$twenty_four_hour)))
+"services2016" <- c(as.numeric(sixteen$twenty_four_hour[1]) / sum(as.numeric(sixteen$twenty_four_hour)),
+                    as.numeric(sixteen$twenty_four_hour[2]) / sum(as.numeric(sixteen$twenty_four_hour)),
+                    as.numeric(sixteen$twenty_four_hour[3]) / sum(as.numeric(sixteen$twenty_four_hour)),
+                    as.numeric(sixteen$twenty_four_hour[4]) / sum(as.numeric(sixteen$twenty_four_hour)),
+                    as.numeric(sixteen$twenty_four_hour[5]) / sum(as.numeric(sixteen$twenty_four_hour)),
+                    as.numeric(sixteen$twenty_four_hour[6]) / sum(as.numeric(sixteen$twenty_four_hour)),
+                    as.numeric(sixteen$twenty_four_hour[7]) / sum(as.numeric(sixteen$twenty_four_hour)))
+"services2017" <- c(as.numeric(seventeen$twenty_four_hour[1]) / sum(as.numeric(seventeen$twenty_four_hour)),
+                    as.numeric(seventeen$twenty_four_hour[2]) / sum(as.numeric(seventeen$twenty_four_hour)),
+                    as.numeric(seventeen$twenty_four_hour[3]) / sum(as.numeric(seventeen$twenty_four_hour)),
+                    as.numeric(seventeen$twenty_four_hour[4]) / sum(as.numeric(seventeen$twenty_four_hour)),
+                    as.numeric(seventeen$twenty_four_hour[5]) / sum(as.numeric(seventeen$twenty_four_hour)),
+                    as.numeric(seventeen$twenty_four_hour[6]) / sum(as.numeric(seventeen$twenty_four_hour)),
+                    as.numeric(seventeen$twenty_four_hour[7]) / sum(as.numeric(seventeen$twenty_four_hour)))
+
+percentages <- data.frame(service <- c(rep(unique(services$`ED Services Available`), 5)),
+                          year <- c(rep(2013, 7), rep(2014, 7), rep(2015, 7), rep(2016, 7), rep(2017, 7)),
+                          percentage <- c(services2013, services2014, services2015, services2016, services2017))
+
+one <- percentages |> filter(year == 2013)
+colnames(one)[1] <- "service"
+colnames(one)[2] <- "year"
+colnames(one)[3] <- "percent"
+ggplot(one, aes(service, percent)) +
+  geom_col() +
+  labs(title = "2013 Services by Percentage")
+
+two <- percentages |> filter(year == 2014)
+two <- clean_names(two)
+colnames(two)[1] <- "service"
+colnames(two)[2] <- "year"
+colnames(two)[3] <- "percent"
+ggplot(two, aes(service, percent)) +
+  geom_col() +
+  labs(title = "2014 Services by Percentage")
+
+three <- percentages |> filter(year == 2015)
+colnames(three)[1] <- "service"
+colnames(three)[2] <- "year"
+colnames(three)[3] <- "percent"
+ggplot(three, aes(service, percent)) +
+  geom_col() +
+  labs(title = "2015 Services by Percentage")
+
+four <- percentages |> filter(year == 2016)
+colnames(four)[1] <- "service"
+colnames(four)[2] <- "year"
+colnames(four)[3] <- "percent"
+ggplot(four, aes(service, percent)) +
+  geom_col() +
+  labs(title = "2016 Services by Percentage")
+
+five <- percentages |> filter(year == 2017)
+colnames(five)[1] <- "service"
+colnames(five)[2] <- "year"
+colnames(five)[3] <- "percent"
+ggplot(five, aes(service, percent)) +
+  geom_col() +
+  labs(title = "2017 Services by Percentage")
+
+```
+
+### Part 3 - Determine which months had the most ambulance diversion (in hours) each year and overall
+
+How I cleaned and analyzed the data:
+
+-   First, I imported all the data needed for the question. I removed the rows I did not need, and I made a new data frame with the specific rows I needed for the question. Then, the first row of the new data frame was used as the header.
+
+-   I removed some more rows and columns to keep only the data I needed.
+
+-   I lengthened the data to make it tidy by using pivot_longer().
+
+-   I renamed the first column to make it a better name.
+
+-   I removed the commas in the column "hours" and turned the column into a numeric class.
+
+-   Then, I found the total number of diversion hours for each month over the course of all the years using a for loop. I found the month with the highest total to answer the first question. I determined which month had the highest total by outputting "months" and "totals." They lined up accordingly, so the max(totals) value lined up with the month with the highest total. In this case, it was January at 63881.
+
+-   Then, I looked at each year and found the total number of diversion hours for each month in each year. I created a data frame to show the results clearly and used that to answer the question.
+
+-   I output the data frame with gt in the simplest way to make the answer clear.
+
+Conclusions:
+
+In 2013, January had the most ambulance diversion hours: 11536 hours. In 2015, January had the most ambulance diversion hours: 9993 hours. In 2016, January had the most ambulance diversion hours: 17413 hours. In 2017, February had the most ambulance diversion hours: 16777 hours. In 2018, January had the most ambulance diversion hours: 12852 hours.
+
+Overall, January had the most ambulance diversion hours.
+
+Based on all these results, winter seems to be the time with the most ambulance diversion hours. This makes sense because roads might be snowy or more dangerous in certain parts of California during the winter, leading to longer drive times. Also, if certain parts of California are dealing with winter storms, they might divert their ambulances to places with better storm conditions. Therefore, the results make sense.
+
+```{r hospital-ambulance-diversion}
+hospitalData <- read.csv("https://raw.githubusercontent.com/juliaDataScience-22/cuny-fall-23/Project-2/project2-data1.csv")
+hospitalData <- hospitalData[-1:-12,]
+diversion <- hospitalData[71:86,]
+diversion <- diversion |> row_to_names(row_number = 1)
+diversion <- diversion[,c(-3,-5,-7,-9,-11)]
+diversion <- diversion[c(-1,-2,-15),]
+
+library(tidyr)
+diversion <- pivot_longer(diversion, 
+             cols = c("2013", "2014", "2015", "2016", "2017"),
+             names_to = "year",
+             values_to = "hours")
+
+colnames(diversion)[1] <- "month"
+
+
+diversion$hours <- gsub(",","",diversion$hours)
+diversion$hours <- as.numeric(diversion$hours)
+
+totals <- c()
+months <- unique(diversion$month)
+
+for (tempMonth in months)
+{
+  temp <- diversion |> filter(month == tempMonth)
+  totals <- c(totals, sum(temp$hours))
+}
+
+max(totals)
+months
+totals
+
+maxMonths <- c()
+maxMonthHours <- c()
+
+years <- unique(diversion$year)
+
+
+for (tempYear in years)
+{
+  temp <- diversion |> filter(year == tempYear) |> filter(hours == max(hours))
+  maxMonths <- c(maxMonths, temp$month)
+  maxMonthHours <- c(maxMonthHours, temp$hours)
+}
+
+max <- data.frame(year <- c(2013, 2014, 2015, 2016, 2017),
+                  months <- c(maxMonths),
+                  hours <- c(maxMonthHours))
+colnames(max) <- c("year", "month", "hours")
+
+library(gt)
+gt(max)
+
+```
+
+## Dataset 2 - Insurance Data
+
+The original data is located here: <https://data.world/uscensusbureau/income-poverty-health-ins>
+
+How I tidied the data:
+
+-   First, I imported the data from GitHub.
+
+-   Next, I made the first row the column headers.
+
+-   I removed unnecessary rows and columns.
+
+-   I used pivot_longer() to make the data tidy.
+
+-   I split one of the columns into two to get years in one column and type of information in another.
+
+```{r insurance}
+insuranceData <- read.csv("https://raw.githubusercontent.com/juliaDataScience-22/cuny-fall-23/Project-2/project2-data2.csv", header = FALSE)
+insuranceData <- insuranceData |> row_to_names(row_number = 1)
+insuranceData <- insuranceData[,c(-22:-15)]
+insuranceData <- insuranceData[-1,]
+
+library(tidyr)
+insuranceData <- pivot_longer(insuranceData, 
+             cols = c(colnames(insuranceData)[3:14]),
+             names_to = "year",
+             values_to = "values")
+
+insuranceData[c('year', 'number_uninsured')] <- str_split_fixed(insuranceData$year, "Uninsured - ", 2)
+```
+
+### Part 1 - In which year did NY have the fewest people uninsured? Create a graph that shows the trend in uninsured people over the three years.
+
+How I tidied and analyzed the data:
+
+-   First, I filtered out rows that were only from NY state and rows that only showed the number (not the percent).
+
+-   I removed the comma symbol to convert the values to numeric.
+
+-   Then, I output the year in which the fewest people were uninsured in NY.
+
+-   I used ggplot() to create a graph of the three years.
+
+Conclusion: In 2015, NY had the fewest people uninsured.
+
+The graph is below.
+
+```{r ny-fewest-uninsured}
+nyData <- insuranceData |>
+  filter(State == "New York") |>
+  filter(number_uninsured == "Number")
+nyData$values <- gsub(",", "", nyData$values)
+nyData |>
+  filter(values == min(as.numeric(nyData$values)))
+
+ggplot(nyData, aes(x = as.numeric(year), y = as.numeric(values))) +
+  geom_point() +
+  geom_line() +
+  labs(title = "Number of Uninsured Residents of NY") +
+  xlab("Year") +
+  ylab("Count")
+```
+
+### Part 2 - Which states had the most people uninsured consistently?
+
+How I tidied and analyzed the data:
+
+-   First, I filtered out rows that only showed the number (not the percent).
+
+-   I removed the column symbol.
+
+-   I used ggplot() to create a graph of uninsured people. I used this graph to determine the range for the states with the highest numbers of people.
+
+-   I used that range to create a new graph of the top three states.
+
+Conclusions: Texas, California, and Florida had the highest number of people uninsured consistently over time. Their numbers decreased each year, but they remained at the top. See the graphs below.
+
+```{r all-uninsured}
+allStates <- insuranceData |> filter(number_uninsured == "Number")
+
+allStates$values <- gsub(",", "", allStates$values)
+
+ggplot(allStates, aes(x = as.numeric(year), y = as.numeric(values), color = State)) +
+  geom_point() +
+  labs(title = "Number of Uninsured People") +
+  xlab("Year") +
+  ylab("Count")
+
+states <- allStates |> filter(as.numeric(values) > 2300)
+ggplot(states, aes(x = as.numeric(year), y = as.numeric(values), color = State)) +
+  geom_point() +
+  labs(title = "Number of Uninsured People in Highly Uninsured States") +
+  xlab("Year") +
+  ylab("Count")
+```
+
+## Dataset 3 - Data about countries around the world
+
+This is where I found the data: <https://data.world/data-society/global-health-nutrition-data>
+
+```{r countries}
+df1 <- read.csv("https://raw.githubusercontent.com/juliaDataScience-22/cuny-fall-23/Project-2/project2-data3a.csv")
+df2 <- read.csv("https://raw.githubusercontent.com/juliaDataScience-22/cuny-fall-23/Project-2/project2-data3b.csv")
+
+countriesData <- rbind(df1, df2)
+```
+
+### Part 1 - Compare the mortality rate of male and female adults to the total populations of male and females in different countries. Did the rates have a relationship with the total populations? Did males and females differ in their numbers? Did the mortality rates decrease over time?
+
+How I tidied and analyzed the data:
+
+-   I created a new data frame by filtering out the rows I needed.
+
+-   I replaced all NA values with 0 because it allowed me to execute the code.
+
+-   I used pivot_longer() to tidy the data.
+
+-   I removed X from each year and converted the year column to a numeric class.
+
+-   I created data frames of mortality rates for males and females.
+
+-   I used those data frames to create graphs in ggplot().
+
+-   I repeated the last two steps for populations instead of mortality rates.
+
+-   I compared the graphs for analysis.
+
+Conclusions:
+
+Mortality rates for both male and female adults appear to be declining in most countries over time. Population totals for males and females appear to be increasing over time. They might have an inverse relationship, but mortality rates were much less consistent in terms of a linear model than population changes. Thus, the two variables do not seem to impact each other. Males and females had similar mortality rates when comparing each country to itself. However, males had a smaller range for mortality over the years than females. The population changes of males and females did not seem to be significantly different over the years. Lastly, mortality rates generally decreased over time. However, there were spikes in the mortality rates in many countries. To determine the causes of those spikes, further research into natural disasters, traumatic events, and other disastrous situations would need to occur. During those spikes in mortality, population totals did not appear to change. This could indicate that the mortality of adults did not affect total population in a significant amount. Births or the mortality of elderly adults might affect the population more than the deaths of adults. That statement would have to be researched to determine its validity.
+
+```{r mortality-and-population}
+mort_pop <- 
+  countriesData |>
+  filter((Indicator.Code == "SP.DYN.AMRT.FE") | (Indicator.Code == "SP.DYN.AMRT.MA") 
+         | (Indicator.Code == "SP.POP.TOTL.FE.IN") | (Indicator.Code == "SP.POP.TOTL.MA.IN"))
+
+mort_pop[is.na(mort_pop)]  <- 0
+
+library(tidyr)
+mort_pop <- pivot_longer(mort_pop, 
+             cols = c(colnames(mort_pop)[5:60]),
+             names_to = "year",
+             values_to = "values")
+mort_pop$year <- gsub("X", "", mort_pop$year)
+mort_pop$year <- as.numeric(mort_pop$year)
+
+malesMort <- 
+  mort_pop |>
+  filter(Indicator.Code == "SP.DYN.AMRT.MA")
+femalesMort <-
+  mort_pop |>
+  filter(Indicator.Code == "SP.DYN.AMRT.FE")
+
+ggplot(malesMort, aes(x = year, y = values, color = Country.Code)) +
+  geom_point() +
+  labs(title = "Male Mortality Rate by Country") +
+  xlab("Year") +
+  ylab("Value") +
+  theme(legend.position = "none")
+
+ggplot(femalesMort, aes(x = year, y = values, color = Country.Code)) +
+  geom_point() +
+  labs(title = "Female Mortality Rate by Country") +
+  xlab("Year") +
+  ylab("Value") +
+  theme(legend.position = "none")
+
+malesPop <- 
+  mort_pop |>
+  filter(Indicator.Code == "SP.POP.TOTL.MA.IN")
+femalesPop <-
+  mort_pop |>
+  filter(Indicator.Code == "SP.POP.TOTL.FE.IN")
+
+ggplot(malesPop, aes(x = year, y = values, color = Country.Code)) +
+  geom_point() +
+  labs(title = "Male Population by Country") +
+  xlab("Year") +
+  ylab("Value") +
+  theme(legend.position = "none")
+
+ggplot(femalesPop, aes(x = year, y = values, color = Country.Code)) +
+  geom_point() +
+  labs(title = "Female Population by Country") +
+  xlab("Year") +
+  ylab("Value") +
+  theme(legend.position = "none")
+```
+
+### Part 2 - Compare the public and private health expenditure in the countries over time for the countries that had the top 5 highest populations in 2015. Create a graph to show all the countries public and private health spending.
+
+How I tidied and analyzed the data:
+
+-   First I determined the countries with the top 5 populations from 2015.
+
+-   Then, I made a data frame of the countries with the top 5 populations to then create a graph of populations.
+
+-   I focused on public health expenditures first. I filtered the data and removed columns that only contained NA. I tidied the data with pivot_longer() and removed the X in front of years.
+
+-   I repeated the previous bullet point for private data.
+
+-   Then, I plotted the two data frames with ggplot().
+
+-   Lastly, I created plots for all the countries (public and private health expenditures) by following a similar process. Instead of filtering by country, I included all countries and just filtered by health expenditure.
+
+Conclusions:
+
+The countries with the top 5 highest populations in 2015 were China, India, United States, Indonesia, and Brazil. Other "countries" appeared in the top 5, but they were categories or regions of countries, not individual countries. These were the top 5 individual countries by population in 2015.
+
+Of those five countries, the country that spent the highest percentage on health care was the United States. Over time, the United States private and public spending increased the most. China decreased their private spending the most.
+
+When looking at all the countries in one graph about public health spending, the top five countries were in the normal range of all the countries. They were not past 10% like the top countries in this graph. However, these "countries" also include general regions and areas, so the top "countries" likely represent regions of countries, meaning combinations of multiple countries into one percentage. This is different for the graph about private health spending. The U.S. was close to the top range in that graph. This means the U.S. should probably work on reducing private spending in healthcare if possible.
+
+```{r health-expenditure}
+
+fifteen <- countriesData |>
+  filter(Indicator.Code == "SP.POP.TOTL")
+
+invisible(head(dplyr::arrange(fifteen, desc(X2015)), n = 50))
+
+populations <- countriesData[,c(1,2,4,60)] |>
+  filter(Indicator.Code == "SP.POP.TOTL") |>
+  filter((Country.Code == "CHN") | (Country.Code == "IND") | (Country.Code == "USA") | (Country.Code == "IDN") | (Country.Code == "BRA"))
+
+populations <- dplyr::arrange(populations, desc(X2015))
+
+
+ggplot(populations, aes(Country.Name, X2015)) +
+  geom_col() +
+  labs(title = "2017 Services by Percentage")
+         
+         
+
+public <- 
+  countriesData |>
+  filter(Indicator.Code == "SH.XPD.PUBL.ZS") |>
+  filter((Country.Code == "CHN") | (Country.Code == "IND") | (Country.Code == "USA") | (Country.Code == "IDN") | (Country.Code == "BRA"))
+
+public <- public[c(1:4, 40:59)]
+
+public <- pivot_longer(public, 
+             cols = c(colnames(public)[5:24]),
+             names_to = "year",
+             values_to = "percent_by_gdp")
+public$year <- gsub("X", "", public$year)
+
+private <- 
+  countriesData |>
+  filter(Indicator.Code == "SH.XPD.PRIV.ZS") |>
+  filter((Country.Code == "CHN") | (Country.Code == "IND") | (Country.Code == "USA") | (Country.Code == "IDN") | (Country.Code == "BRA"))
+
+private <- private[c(1:4, 40:59)]
+
+private <- pivot_longer(private, 
+             cols = c(colnames(private)[5:24]),
+             names_to = "year",
+             values_to = "percent_by_gdp")
+private$year <- gsub("X", "", private$year)
+
+
+ggplot(public, aes(x = year, y = percent_by_gdp, color = Country.Code)) +
+  geom_point() +
+  labs(title = "Public Health Expenditure by Country") +
+  xlab("Year") +
+  ylab("Expenditure (% of GPD)") 
+
+ggplot(private, aes(x = year, y = percent_by_gdp, color = Country.Code)) +
+  geom_point() +
+  labs(title = "Private Health Expenditure by Country") +
+  xlab("Year") +
+  ylab("Expenditure (% of GPD)") 
+
+
+public <- 
+  countriesData |>
+  filter(Indicator.Code == "SH.XPD.PUBL.ZS")
+
+public <- public[c(1:4, 40:59)]
+
+public <- pivot_longer(public, 
+             cols = c(colnames(public)[5:24]),
+             names_to = "year",
+             values_to = "percent_by_gdp")
+public$year <- gsub("X", "", public$year)
+ggplot(public, aes(x = year, y = percent_by_gdp, color = Country.Code)) +
+  geom_point() +
+  labs(title = "Public Health Expenditure of all Countries") +
+  xlab("Year") +
+  ylab("Expenditure (% of GPD)") +
+  theme(legend.position = "none")
+
+
+private <- 
+  countriesData |>
+  filter(Indicator.Code == "SH.XPD.PRIV.ZS")
+
+private <- private[c(1:4, 40:59)]
+
+private <- pivot_longer(private, 
+             cols = c(colnames(private)[5:24]),
+             names_to = "year",
+             values_to = "percent_by_gdp")
+private$year <- gsub("X", "", private$year)
+ggplot(private, aes(x = year, y = percent_by_gdp, color = Country.Code)) +
+  geom_point() +
+  labs(title = "Private Health Expenditure of all Countries") +
+  xlab("Year") +
+  ylab("Expenditure (% of GPD)") +
+  theme(legend.position = "none")
+```
+
+## Sources:
+
+1.  Wickham, H., Çetinkaya-Rundel, M., & Grolemund, G. (2023). R for Data Science (2nd ed.). O'Reilly.
+
+2.  DataCamp. (n.d.). Row_to_names: Elevate a row to be the column names of a data.frame. RDocumentation. <https://www.rdocumentation.org/packages/janitor/versions/2.2.0/topics/row_to_names>
