@@ -1,0 +1,304 @@
+---
+title: "Data Science in Context - Water"
+author: "Julia Ferris"
+date: "2023-10-02"
+output:
+  beamer_presentation: default
+  slidy_presentation: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## About this code:
+
+In my Data Science in Context presentation, I only used some of the graphs produced here. I also only included graphs with complete sets of data. Any missing values were not used. In the simplified data sets, E stands for estimated data, and I stands for imputed data.
+
+## Data
+
+```{r cars}
+library(readr)
+library(dplyr)
+library(ggplot2)
+fullWaterData <- read_csv("https://raw.githubusercontent.com/juliaDataScience-22/cuny-fall-23/manage-acquire-data/Water-Data-Sc-Context.csv")
+fullWaterData$Country <- replace(fullWaterData$Country, fullWaterData$Country == "C\xf4te d'Ivoire", "Cote d'Ivoire")
+fullWaterData$Country <- replace(fullWaterData$Country, fullWaterData$Country == "T\xfcrkiye", "Turkiye")
+View(fullWaterData)
+
+simplifiedWaterData <- data.frame(Country = fullWaterData$Country,
+                          Year = fullWaterData$Year,
+                          `Agricultural Water Withdrawal` = coalesce
+                          (fullWaterData$`E - Agricultural water withdrawal as % of total renewable water resources`, 
+                            fullWaterData$`I - Agricultural water withdrawal as % of total renewable water resources`),
+                          `Industrial Water Use` = coalesce(fullWaterData$`E - SDG 6.4.1. Industrial Water Use Efficiency`, 
+                                                            fullWaterData$`I - SDG 6.4.1. Industrial Water Use Efficiency`),
+                          `Irrigated Agriculture Water Use` = coalesce
+                          (fullWaterData$`E - SDG 6.4.1. Irrigated Agriculture Water Use Efficiency`, 
+                            fullWaterData$`I - SDG 6.4.1. Irrigated Agriculture Water Use Efficiency`),
+                          `Services Water Use` = fullWaterData$`E - SDG 6.4.1. Services Water Use Efficiency`,
+                          `Water Use` = coalesce(fullWaterData$`E - SDG 6.4.1. Water Use Efficiency`, 
+                                                 fullWaterData$`I - SDG 6.4.1. Water Use Efficiency`),
+                          `Water Stress` = coalesce(fullWaterData$`E - SDG 6.4.2. Water Stress`, 
+                                                    fullWaterData$`I - SDG 6.4.2. Water Stress`))
+View(simplifiedWaterData)
+
+usWaterData <- (fullWaterData[1751:1760,])
+View(usWaterData)
+
+simplifiedUSWaterData <- simplifiedWaterData[1751:1760,]
+View(simplifiedUSWaterData)
+
+canadaWaterData <- simplifiedWaterData[301:310,]
+View(canadaWaterData)
+
+mexicoWaterData <- simplifiedWaterData[1071:1080,]
+View(mexicoWaterData)
+```
+
+## Visualize Trends
+
+
+```{r pressure, fig.show="hold", out.width="50%"}
+ggplot(fullWaterData, aes(Year, `E - Agricultural water withdrawal as % of total renewable water resources`, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(fullWaterData[,c(1,2,3)], desc(`E - Agricultural water withdrawal as % of total renewable water resources`)) |> head(n = 30)
+
+ggplot(fullWaterData, aes(Year, `I - Agricultural water withdrawal as % of total renewable water resources`, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(fullWaterData[,c(1,2,4)], desc(`I - Agricultural water withdrawal as % of total renewable water resources`)) |> head(n = 30)
+
+ggplot(fullWaterData, aes(Year, `E - SDG 6.4.1. Industrial Water Use Efficiency`, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(fullWaterData[,c(1,2,5)], desc(`E - SDG 6.4.1. Industrial Water Use Efficiency`)) |> head(n = 30)
+
+ggplot(fullWaterData, aes(Year, `I - SDG 6.4.1. Industrial Water Use Efficiency`, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(fullWaterData[,c(1,2,6)], desc(`I - SDG 6.4.1. Industrial Water Use Efficiency`)) |> head(n = 30)
+
+ggplot(fullWaterData, aes(Year, `E - SDG 6.4.1. Irrigated Agriculture Water Use Efficiency`, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(fullWaterData[,c(1,2,7)], desc(`E - SDG 6.4.1. Irrigated Agriculture Water Use Efficiency`)) |> head(n = 30)
+
+ggplot(fullWaterData, aes(Year, `I - SDG 6.4.1. Irrigated Agriculture Water Use Efficiency`, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(fullWaterData[,c(1,2,8)], desc(`I - SDG 6.4.1. Irrigated Agriculture Water Use Efficiency`)) |> head(n = 30)
+
+ggplot(fullWaterData, aes(Year, `E - SDG 6.4.1. Services Water Use Efficiency`, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(fullWaterData[,c(1,2,9)], desc(`E - SDG 6.4.1. Services Water Use Efficiency`)) |> head(n = 30)
+
+ggplot(fullWaterData, aes(Year, `E - SDG 6.4.1. Water Use Efficiency`, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(fullWaterData[,c(1,2,10)], desc(`E - SDG 6.4.1. Water Use Efficiency`)) |> head(n = 30)
+
+ggplot(fullWaterData, aes(Year, `I - SDG 6.4.1. Water Use Efficiency`, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(fullWaterData[,c(1,2,11)], desc(`I - SDG 6.4.1. Water Use Efficiency`)) |> head(n = 30)
+
+ggplot(fullWaterData, aes(Year, `E - SDG 6.4.2. Water Stress` , color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(fullWaterData[,c(1,2,12)], desc(`E - SDG 6.4.2. Water Stress`)) |> head(n = 30)
+
+ggplot(fullWaterData, aes(Year, `I - SDG 6.4.2. Water Stress` , color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(fullWaterData[,c(1,2,13)], desc(`I - SDG 6.4.2. Water Stress`)) |> head(n = 30)
+
+```
+
+
+## Time Series Analysis
+
+```{r simplified-graphs, fig.show="hold", out.width="50%"}
+ggplot(simplifiedWaterData, aes(Year, `Agricultural.Water.Withdrawal`, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(simplifiedWaterData[,c(1,2,3)], desc(`Agricultural.Water.Withdrawal`)) |> head(n = 30)
+
+ggplot(simplifiedWaterData, aes(Year, Industrial.Water.Use, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(simplifiedWaterData[,c(1,2,4)], desc(Industrial.Water.Use)) |> head(n = 30)
+
+ggplot(simplifiedWaterData, aes(Year, Irrigated.Agriculture.Water.Use, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(simplifiedWaterData[,c(1,2,5)], desc(Irrigated.Agriculture.Water.Use)) |> head(n = 30)
+
+ggplot(simplifiedWaterData, aes(Year, Services.Water.Use, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(simplifiedWaterData[,c(1,2,6)], desc(Services.Water.Use)) |> head(n = 30)
+
+ggplot(simplifiedWaterData, aes(Year, Water.Use, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(simplifiedWaterData[,c(1,2,7)], desc(Water.Use)) |> head(n = 30)
+
+ggplot(simplifiedWaterData, aes(Year, Water.Stress, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(simplifiedWaterData[,c(1,2,8)], desc(Water.Stress)) |> head(n = 30)
+
+```
+## US Water Stress
+```{r water-us, fig.show="hold", out.width="50%"}
+ggplot(usWaterData, aes(Year, `E - Agricultural water withdrawal as % of total renewable water resources`, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(usWaterData[,c(1,2,3)], desc(`E - Agricultural water withdrawal as % of total renewable water resources`)) |> head(n = 30)
+
+ggplot(usWaterData, aes(Year, `I - Agricultural water withdrawal as % of total renewable water resources`, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(usWaterData[,c(1,2,4)], desc(`I - Agricultural water withdrawal as % of total renewable water resources`)) |> head(n = 30)
+
+ggplot(usWaterData, aes(Year, `E - SDG 6.4.1. Industrial Water Use Efficiency`, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(usWaterData[,c(1,2,5)], desc(`E - SDG 6.4.1. Industrial Water Use Efficiency`)) |> head(n = 30)
+
+ggplot(usWaterData, aes(Year, `E - SDG 6.4.1. Irrigated Agriculture Water Use Efficiency`, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(usWaterData[,c(1,2,7)], desc(`E - SDG 6.4.1. Irrigated Agriculture Water Use Efficiency`)) |> head(n = 30)
+
+ggplot(usWaterData, aes(Year, `E - SDG 6.4.1. Services Water Use Efficiency`, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(fullWaterData[,c(1,2,9)], desc(`E - SDG 6.4.1. Services Water Use Efficiency`)) |> head(n = 30)
+
+ggplot(usWaterData, aes(Year, `I - SDG 6.4.1. Water Use Efficiency`, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(fullWaterData[,c(1,2,11)], desc(`I - SDG 6.4.1. Water Use Efficiency`)) |> head(n = 30)
+
+ggplot(usWaterData, aes(Year, `E - SDG 6.4.2. Water Stress` , color = Country)) +
+  geom_point() + theme(legend.position = "none")
+arrange(fullWaterData[,c(1,2,12)], desc(`E - SDG 6.4.2. Water Stress`)) |> head(n = 30)
+
+```
+
+## US Water Stress - Simplified
+
+```{r more-water-data, fig.show="hold", out.width="50%"}
+ggplot(simplifiedUSWaterData, aes(Year, `Agricultural.Water.Withdrawal`, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+
+ggplot(simplifiedUSWaterData, aes(Year, Industrial.Water.Use, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+
+ggplot(simplifiedUSWaterData, aes(Year, Irrigated.Agriculture.Water.Use, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+
+ggplot(simplifiedUSWaterData, aes(Year, Services.Water.Use, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+
+ggplot(simplifiedUSWaterData, aes(Year, Water.Use, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+
+ggplot(simplifiedUSWaterData, aes(Year, Water.Stress, color = Country)) +
+  geom_point() + theme(legend.position = "none")
+
+```
+
+``` {r all-data, fig.show="hold", out.width="50%"}
+ggplot() +
+  geom_point(data = canadaWaterData, mapping = aes(Year, `Agricultural.Water.Withdrawal`, color = Country)) +
+  geom_point(data = simplifiedUSWaterData, mapping = aes(Year, `Agricultural.Water.Withdrawal`, color = Country)) +
+  geom_point(data = mexicoWaterData, mapping = aes(Year, `Agricultural.Water.Withdrawal`, color = Country))
+
+ggplot() +
+  geom_point(data = canadaWaterData, mapping = aes(Year, `Industrial.Water.Use`, color = Country)) +
+  geom_point(data = simplifiedUSWaterData, mapping = aes(Year, `Industrial.Water.Use`, color = Country)) +
+  geom_point(data = mexicoWaterData, mapping = aes(Year, `Industrial.Water.Use`, color = Country))
+
+ggplot() +
+  geom_point(data = canadaWaterData, mapping = aes(Year, `Irrigated.Agriculture.Water.Use`, color = Country)) +
+  geom_point(data = simplifiedUSWaterData, mapping = aes(Year, `Irrigated.Agriculture.Water.Use`, color = Country)) +
+  geom_point(data = mexicoWaterData, mapping = aes(Year, `Irrigated.Agriculture.Water.Use`, color = Country))
+
+ggplot() +
+  geom_point(data = canadaWaterData, mapping = aes(Year, `Services.Water.Use`, color = Country)) +
+  geom_point(data = simplifiedUSWaterData, mapping = aes(Year, `Services.Water.Use`, color = Country)) +
+  geom_point(data = mexicoWaterData, mapping = aes(Year, `Services.Water.Use`, color = Country))
+
+ggplot() +
+  geom_point(data = canadaWaterData, mapping = aes(Year, `Water.Use`, color = Country)) +
+  geom_point(data = simplifiedUSWaterData, mapping = aes(Year, `Water.Use`, color = Country)) +
+  geom_point(data = mexicoWaterData, mapping = aes(Year, `Water.Use`, color = Country))
+
+ggplot() +
+  geom_point(data = canadaWaterData, mapping = aes(Year, `Water.Stress`, color = Country)) +
+  geom_point(data = simplifiedUSWaterData, mapping = aes(Year, `Water.Stress`, color = Country)) +
+  geom_point(data = mexicoWaterData, mapping = aes(Year, `Water.Stress`, color = Country))
+```
+
+```{r comparison, fig.show="hold", out.width="33%"}
+ggplot(canadaWaterData, aes(Year, `Agricultural.Water.Withdrawal`, color = Country)) +
+  geom_point(color = "blue") + geom_smooth(color = "blue") +
+  theme(legend.position = "none") +
+  labs(title = "Canada")
+ggplot(simplifiedUSWaterData, aes(Year, `Agricultural.Water.Withdrawal`, color = Country)) +
+  geom_point(color = "red") + geom_smooth(color = "red") + 
+  theme(legend.position = "none") +
+  labs(title = "U.S.")
+ggplot(mexicoWaterData, aes(Year, `Agricultural.Water.Withdrawal`, color = Country)) +
+  geom_point(color = "green") + geom_smooth(color = "green") + 
+  theme(legend.position = "none") +
+  labs(title = "Mexico")
+
+ggplot(canadaWaterData, aes(Year, Industrial.Water.Use, color = Country)) +
+  geom_point(color = "blue") + geom_smooth(color = "blue") + 
+  theme(legend.position = "none") +
+  labs(title = "Canada")
+ggplot(simplifiedUSWaterData, aes(Year, Industrial.Water.Use, color = Country)) +
+  geom_point(color = "red") + geom_smooth(color = "red") +
+  theme(legend.position = "none") +
+  labs(title = "U.S.")
+ggplot(mexicoWaterData, aes(Year, Industrial.Water.Use, color = Country)) +
+  geom_point(color = "green") + geom_smooth(color = "green") +
+  theme(legend.position = "none") +
+  labs(title = "Mexico")
+
+ggplot(canadaWaterData, aes(Year, Irrigated.Agriculture.Water.Use, color = Country)) +
+  geom_point(color = "blue") + geom_smooth(color = "blue") +
+  theme(legend.position = "none") +
+  labs(title = "Canada")
+ggplot(simplifiedUSWaterData, aes(Year, Irrigated.Agriculture.Water.Use, color = Country)) +
+  geom_point(color = "red") + geom_smooth(color = "red") +
+  theme(legend.position = "none") +
+  labs(title = "U.S.")
+ggplot(mexicoWaterData, aes(Year, Irrigated.Agriculture.Water.Use, color = Country)) +
+  geom_point(color = "green") + geom_smooth(color = "green") +
+  theme(legend.position = "none") +
+  labs(title = "Mexico")
+
+ggplot(canadaWaterData, aes(Year, Services.Water.Use, color = Country)) +
+  geom_point(color = "blue") + geom_smooth(color = "blue") +
+  theme(legend.position = "none") +
+  labs(title = "Canada")
+ggplot(simplifiedUSWaterData, aes(Year, Services.Water.Use, color = Country)) +
+  geom_point(color = "red") + geom_smooth(color = "red") +
+  theme(legend.position = "none") +
+  labs(title = "U.S.")
+ggplot(mexicoWaterData, aes(Year, Services.Water.Use, color = Country)) +
+  geom_point(color = "green") + geom_smooth(color = "green") +
+  theme(legend.position = "none") +
+  labs(title = "Mexico")
+
+ggplot(canadaWaterData, aes(Year, Water.Use, color = Country)) +
+  geom_point(color = "blue") + geom_smooth(color = "blue") +
+  theme(legend.position = "none") +
+  labs(title = "Canada")
+ggplot(simplifiedUSWaterData, aes(Year, Water.Use, color = Country)) +
+  geom_point(color = "red") + geom_smooth(color = "red") +
+  geom_smooth() + theme(legend.position = "none") +
+  labs(title = "U.S.")
+ggplot(mexicoWaterData, aes(Year, Water.Use, color = Country)) +
+  geom_point(color = "green") + geom_smooth(color = "green") +
+  theme(legend.position = "none") +
+  labs(title = "Mexico")
+
+ggplot(canadaWaterData, aes(Year, Water.Stress, color = Country)) +
+  geom_point(color = "blue") + geom_smooth(color = "blue") +
+  theme(legend.position = "none") +
+  labs(title = "Canada")
+ggplot(simplifiedUSWaterData, aes(Year, Water.Stress, color = Country)) +
+  geom_point(color = "red") + geom_smooth(color = "red") +
+  theme(legend.position = "none") +
+  labs(title = "U.S.")
+ggplot(mexicoWaterData, aes(Year, Water.Stress, color = Country)) +
+  geom_point(color = "green") + geom_smooth(color = "green") +
+  theme(legend.position = "none") +
+  labs(title = "Mexico")
+
+```
