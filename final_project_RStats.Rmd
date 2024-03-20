@@ -1,0 +1,803 @@
+---
+title: "Human Trafficking Data Analysis - DATA 606"
+author: "Julia Ferris"
+date: "12/6/2023"
+output: slidy_presentation
+---
+
+## Abstract
+
+Human trafficking is a crime that makes victims of people of all ages, genders, and nationalities. Victims experience forced labor, commercial sex, and other forms of modern slavery. Currently, over 27 million people are estimated to be subjected to trafficking. Not all perpetrators of human trafficking are people in organized crime. Sometimes, governments recruit children for forced labor or other uses by their people. Since this is such a massive issue occurring worldwide, it is an issue that needs to be addressed and discussed so that it can be reduced.
+
+In this presentation, all the data came from the website for the United Nations Office on Drugs and Crime. To start, the data was modified into a tidy format to make analysis easier. Several graphs were created to display descriptive statistics about the information. Then, the research focused on trends over time for certain countries by gender and by age, specifically focusing on the U.S. and countries with the highest numbers. To further my research, I also performed t-tests for genders and ages to determine if one gender or one age group experiences trafficking more than the other. The graphs made those differences clear, but the t-tests showed those differences numerically. Lastly, I used linear regression by gender, age, and year to predict future numbers. 
+
+I found that significantly more females were victims of human trafficking compared to males, and I found that significantly more people ages 18 or older were victims of human trafficking compared to people less than 18.
+
+## Introduction {.smaller}
+
+### Data Collection {.smaller}
+
+The data table was downloaded from the United Nations Office on Drugs and Crime (UNDOC). The data were collected from national authorities, such as law enforcement and the criminal justice system in each region. UNDOC collected this data by using the Questionnaire for the Global Report on Trafficking in Persons (GLOTIP). The information reported in the questionnaire is verified with other sources. Although most data were collected with the questionnaire, some information was submitted from other sources, like official websites of national authorities or reports from governments.
+
+### Dependent Variable {.smaller}
+
+The dependent variable is the number of victims of trafficking. This is quantitative.
+
+
+### Independent Variable(s) {.smaller}
+
+The independent variables are gender (males, females) and age group (17 or younger, 18 or older). For the linear regression, year is another independent variable. Those are all quantitative.
+
+### Research Questions {.smaller}
+
+What are some interesting trends over time for different countries by gender and/or age?
+
+What are the results of t-tests that compare males to females and ages 17 and less to ages 18 and older?
+
+How can you use a linear regression line to determine an average number of people in human trafficking (across all countries and in the United States) for each of the following:
+
+1. Males 18 years or more in the year 2023
+
+2. Females 17 years or less in the year 2025
+
+3. Males 17 years or less in the year 2025
+
+4. Females 18 years or more in the year 2023
+
+## Data Preparation
+
+```{r setup, echo=TRUE, results='hide', warning=FALSE, message=FALSE}
+library(readr)
+traffickingVictims <- read_csv("https://raw.githubusercontent.com/juliaDataScience-22/cuny-fall-23/stats-and-probability/data_glotip.csv")
+
+library(dplyr)
+library(plyr)
+library(ggplot2)
+
+# Less than 5 can include 0, 1, 2, 3, or 4.
+# On average, we can expect 2 to be the value, 
+#   so I changed every value that was <5 to 2.
+traffickingVictims$txtVALUE <- gsub("<5",2,traffickingVictims$txtVALUE)
+traffickingVictims$txtVALUE <- as.numeric(traffickingVictims$txtVALUE)
+
+traffickingVictims <- traffickingVictims |>
+  filter(Indicator == "Detected trafficking victims")
+traffickingVictims <- traffickingVictims[,c(-1, -11, -13)]
+
+totals <- traffickingVictims |>
+  filter(Dimension == "Total")
+
+others <- traffickingVictims |>
+  filter(Dimension != "Total")
+
+countryUnique <- unique(na.omit(traffickingVictims$Country))
+
+newOthersDF <- data.frame(Country = c(NA),
+                          Year = c(NA),
+                          Dimension = c(NA),
+                          Sex = c(NA),
+                          Age = c(NA),
+                          Num_Of_People = c(NA))
+
+for (country in countryUnique)
+{
+  if(!is.na(country))
+  {
+    yearsForData <- as.list(others |>
+      filter(Country %in% country) |>
+      select(Year) |>
+      as.list(distinct()))
+    yearsForData <- unique(yearsForData$Year)
+    for (year in yearsForData)
+    {
+      if(!is.na(year))
+      {
+        tempDF <- others |>
+          filter(Country %in% country) |>
+          filter(Year %in% year)
+        dimensions <- unique(tempDF$Dimension)
+        
+        for (dim in dimensions)
+        {
+          if(!is.na(dim))
+          {
+            temp2DF <- tempDF |>
+              filter(Dimension %in% dim)
+            sexes <- unique(temp2DF$Sex)
+            for (sex in sexes)
+            {
+              if(!is.na(sex))
+              {
+                temp3DF <- temp2DF |>
+                  filter(Sex %in% sex)
+                ages <- unique(temp3DF$Age)
+                for (age in ages)
+                {
+                  if(!is.na(age))
+                  {
+                    temp4DF <- temp3DF |>
+                      filter(Age %in% age)
+                    sumForThis <- sum(temp4DF$txtVALUE, na.rm = TRUE)
+                    newlist <- data.frame(Country = country,
+                                          Year = year,
+                                          Dimension = dim,
+                                          Sex = sex,
+                                          Age = age,
+                                          Num_Of_People = sumForThis)
+                    newOthersDF <- bind_rows(newOthersDF, newlist)
+                  } #End age if statement
+                } #End age for loop
+              } #End sex if statement
+            } #End sex for loop
+          } #End dim if statement
+            
+        } #End dim for loop
+      } #End year if statement
+    } #End year for loop
+  } #End country if statement
+} #End country for loop
+
+#This will get rid of the NA row
+newOthersDF <- newOthersDF[-1,]
+
+finalDFTrafficking <- data.frame(Country = c(newOthersDF$Country, totals$Country),
+                                 Year = c(newOthersDF$Year, totals$Year),
+                                 Dimension = c(newOthersDF$Dimension,
+                                               totals$Dimension),
+                                 Sex = c(newOthersDF$Sex, totals$Sex),
+                                 Age = c(newOthersDF$Age, totals$Age),
+                                 Num_Of_People = c(newOthersDF$Num_Of_People,
+                                                   totals$txtVALUE))
+```
+
+
+## Summary Statistics 
+
+The variables were age and gender. The categories for age were 0 to 17, and 18 or older. The categories for gender were Males, and Females. Combinations of these showed counts, indicating the number of people who fit in those categories.
+
+---
+
+### Statistics for gender
+
+Females are much more often victims of trafficking than males.
+
+```{r stats-for-gender}
+options(scipen=999)
+
+new <- finalDFTrafficking |> filter(Sex == "Female")
+females <- sum(new$Num_Of_People, na.rm = TRUE)
+new2 <- finalDFTrafficking |> filter(Sex == "Male")
+males <- sum(new2$Num_Of_People, na.rm = TRUE)
+
+df <- data.frame(sex = c("females", "males"),
+                 count = c(females, males))
+
+ggplot(df, aes(x=sex, y=count)) + 
+  geom_bar(stat = "identity") +
+  labs(title = "Comparison of Victims by Gender")
+
+```
+
+---
+
+### Statistics for age
+
+People over 18 years old are much more often victims of trafficking than people younger than 18.
+
+```{r age-stats}
+new <- finalDFTrafficking |> filter(Age == "0 to 17 years")
+less_than_18 <- sum(new$Num_Of_People, na.rm = TRUE)
+new2 <- finalDFTrafficking |> filter(Age == "18 years or over")
+eighteen_plus <- sum(new2$Num_Of_People, na.rm = TRUE)
+
+df <- data.frame(age = c("0 to 17 years", "18 years or more"),
+                 count = c(less_than_18, eighteen_plus))
+
+ggplot(df, aes(x=age, y=count)) + 
+  geom_bar(stat = "identity") +
+  labs(title = "Comparison of Victims by Age")
+```
+
+---
+
+### Statistics for Gender Plus Age
+
+Age seems to be a more important factor. Females are more often victims than males, but males 18 or older are more often victims than females 17 or younger.
+
+```{r age-and-gender}
+new <- finalDFTrafficking |> filter(Age == "0 to 17 years") |> filter(Sex == "Male")
+less_than_18_male <- sum(new$Num_Of_People, na.rm = TRUE)
+
+new1 <- finalDFTrafficking |> filter(Age == "0 to 17 years") |> filter(Sex == "Female")
+less_than_18_female <- sum(new1$Num_Of_People, na.rm = TRUE)
+
+new2 <- finalDFTrafficking |> filter(Age == "18 years or over") |> filter(Sex == "Male")
+eighteen_plus_male <- sum(new2$Num_Of_People, na.rm = TRUE)
+
+new3 <- finalDFTrafficking |> filter(Age == "18 years or over") |> filter(Sex == "Female")
+eighteen_plus_female <- sum(new3$Num_Of_People, na.rm = TRUE)
+
+df <- data.frame(category = c("17 or less + Males", "17 or less + Females", 
+                              "More than 18 + Males", "More than 18 + Females"),
+                 count = c(less_than_18_male, less_than_18_female, 
+                           eighteen_plus_male, eighteen_plus_female))
+
+ggplot(df, aes(x=category, y=count)) + 
+  geom_bar(stat = "identity") +
+  labs(title = "Comparison of Victims by Gender and Age")
+```
+
+## Victims By Country
+
+The following maps show the number of people in each country in human trafficking. The different graphs show different categories of people, and the totals are all people over all the years.
+
+The last graph shows the highest numbers across the globe, and that graph shows females 18 or older.
+
+```{r victims-by-country}
+countries <- unique(na.omit(finalDFTrafficking$Country))
+otherDF <- c()
+
+for (country in countries)
+{
+  temp <- finalDFTrafficking |> filter(Country == country) |> filter(Age == "0 to 17 years") |> filter(Sex == "Male")
+  males_17_minus <- sum(temp$Num_Of_People, na.rm = TRUE)
+  temp <- finalDFTrafficking |> filter(Country == country) |> filter(Age == "0 to 17 years") |> filter(Sex == "Female")
+  females_17_minus <- sum(temp$Num_Of_People, na.rm = TRUE)
+  temp <- finalDFTrafficking |> filter(Country == country) |> filter(Age == "18 years or over") |> filter(Sex == "Male")
+  males_18_plus <- sum(temp$Num_Of_People, na.rm = TRUE)
+  temp <- finalDFTrafficking |> filter(Country == country) |> filter(Age == "18 years or over") |> filter(Sex == "Female")
+  females_18_plus <- sum(temp$Num_Of_People, na.rm = TRUE)
+  
+  newlist <- data.frame(Country = c(country),
+                        males_17_or_less = c(males_17_minus),
+                        females_17_or_less = c(females_17_minus),
+                        males_18_plus = c(males_18_plus),
+                        females_18_plus = c(females_18_plus))
+  otherDF <- bind_rows(otherDF, newlist)
+}
+
+otherDF$Country <- gsub("United States of America", 'USA', otherDF$Country, useBytes = TRUE)
+
+library(maps)
+
+world_map <- map_data(map = "world")
+
+world_map$region <- gsub("USA", "USA", world_map$region)
+
+
+ggplot(otherDF) +
+  geom_map(aes(map_id = countries, fill = males_17_or_less), map = world_map) +
+  geom_polygon(data = world_map, aes(x = long, y = lat, group = group), colour = 'black', fill = NA) +
+  expand_limits(x = world_map$long, y = world_map$lat) +
+  scale_fill_viridis_c(option = "magma") +
+  theme_void() +
+  coord_fixed() +
+  labs(title = "Number of Male Victims 17 or Younger by Country")
+ggplot(otherDF) +
+  geom_map(aes(map_id = countries, fill = females_17_or_less), map = world_map) +
+  geom_polygon(data = world_map, aes(x = long, y = lat, group = group), colour = 'black', fill = NA) +
+  expand_limits(x = world_map$long, y = world_map$lat) +
+  scale_fill_viridis_c(option = "magma") +
+  theme_void() +
+  coord_fixed() +
+  labs(title = "Number of Female Victims 17 or Younger by Country")
+ggplot(otherDF) +
+  geom_map(aes(map_id = countries, fill = males_18_plus), map = world_map) +
+  geom_polygon(data = world_map, aes(x = long, y = lat, group = group), colour = 'black', fill = NA) +
+  expand_limits(x = world_map$long, y = world_map$lat) +
+  scale_fill_viridis_c(option = "magma") +
+  theme_void() +
+  coord_fixed() +
+  labs(title = "Number of Male Victims 18 or Older by Country")
+ggplot(otherDF) +
+  geom_map(aes(map_id = countries, fill = females_18_plus), map = world_map) +
+  geom_polygon(data = world_map, aes(x = long, y = lat, group = group), colour = 'black', fill = NA) +
+  expand_limits(x = world_map$long, y = world_map$lat) +
+  scale_fill_viridis_c(option = "magma") +
+  theme_void() +
+  coord_fixed() +
+  labs(title = "Number of Female Victims 18 or Older by Country")
+
+```
+
+## Visuals of Trends
+
+In general, the graphs show increases in numbers as the years pass. 
+
+Top countries by continent: United States, Argentina, Nigeria, UK (Great Britain and Northern Ireland), and the Philippines.
+
+Countries with the highest numbers by group:
+
+1. Males 17 or younger: United States of America and Nigeria
+
+2. Males 18 or older: United States of America and Argentina
+
+3. Females 17 or younger: UK and Nigeria (United States possibly)
+
+4. Females 18 or older: Nigeria and Argentina
+
+Note: The United States did not show each group broken up, so the data ends before 2020 for 3 of 4 graphs.
+
+```{r trends-over-time, fig.show="hold", out.width="50%"}
+# For all countries, not easy to distinguish
+ggplot(finalDFTrafficking, aes(x = Year, y= Num_Of_People, color = Country)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking over time") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+
+# For countries with the highest numbers
+
+topCountries <-
+  finalDFTrafficking |>
+  filter((Country == "Canada") | (Country == "Argentina") | (Country == "Brazil") | 
+           (Country == "Peru") | (Country == "Mexico") | (Country == "United States of America") | 
+           (Country == "Nigeria") | (Country == "Ghana") | 
+           (Country == "Burkina Faso") | (Country == "Egypt") | (Country == "Madagascar") | 
+           (Country == "Thailand") | (Country == "Nepal") | (Country == "India") | 
+           (Country == "Myanmar") | (Country == "Bangladesh") | (Country == "Uzbekistan") | 
+           (Country == "Italy") | (Country == "France") | (Country == "Germany") | 
+           (Country == "Czechia") | (Country == "Spain") | (Country == "Belarus") | 
+           (Country == "Ukraine") | (Country == "Romania") | (Country == "Bulgaria") | 
+           (Country == "United Kingdom of Great Britain and Northern Ireland") | (Country == "Philippines") | 
+           (Country == "Netherlands") | (Country == "Russian Federation") | (Country == "Malaysia"))
+
+northAmerican <-
+  finalDFTrafficking |>
+  filter((Country == "Canada") | (Country == "Mexico") | (Country == "United States of America"))
+southAmerican <-
+  finalDFTrafficking |>
+  filter((Country == "Argentina") | (Country == "Brazil") | 
+           (Country == "Peru"))
+african <-
+  finalDFTrafficking |>
+  filter((Country == "Nigeria") | (Country == "Ghana") | 
+           (Country == "Burkina Faso") | (Country == "Egypt") | (Country == "Madagascar"))
+european <-
+  finalDFTrafficking |>
+  filter((Country == "Italy") | (Country == "France") | (Country == "Germany") | 
+           (Country == "Czechia") | (Country == "Spain") | (Country == "Belarus") | 
+           (Country == "Ukraine") | (Country == "Romania") | (Country == "Bulgaria") | 
+           (Country == "United Kingdom of Great Britain and Northern Ireland") | 
+           (Country == "Netherlands") | (Country == "Russian Federation"))
+asian <-
+  finalDFTrafficking |>
+  filter((Country == "Thailand") | (Country == "Nepal") | (Country == "India") | 
+           (Country == "Myanmar") | (Country == "Bangladesh") | (Country == "Uzbekistan") | 
+           (Country == "Philippines") | (Country == "Malaysia"))
+
+northA <- ggplot(northAmerican, aes(x = Year, y= Num_Of_People, color = Country)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking over time") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+southA <- ggplot(southAmerican, aes(x = Year, y= Num_Of_People, color = Country)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking over time") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+africa <- ggplot(african, aes(x = Year, y= Num_Of_People, color = Country)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking over time") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+europe <- ggplot(european, aes(x = Year, y= Num_Of_People, color = Country)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking over time") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+asia <- ggplot(asian, aes(x = Year, y= Num_Of_People, color = Country)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking over time") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Prep for next section
+
+countriesOverTime <- unique(na.omit(finalDFTrafficking$Country))
+otherDF <- c()
+
+for (country in countries)
+{
+  temp <- finalDFTrafficking |> filter(Country == country) |> filter(Age == "0 to 17 years") |> filter(Sex == "Male")
+  males_17_minus <- sum(temp$Num_Of_People, na.rm = TRUE)
+  temp <- finalDFTrafficking |> filter(Country == country) |> filter(Age == "0 to 17 years") |> filter(Sex == "Female")
+  females_17_minus <- sum(temp$Num_Of_People, na.rm = TRUE)
+  temp <- finalDFTrafficking |> filter(Country == country) |> filter(Age == "18 years or over") |> filter(Sex == "Male")
+  males_18_plus <- sum(temp$Num_Of_People, na.rm = TRUE)
+  temp <- finalDFTrafficking |> filter(Country == country) |> filter(Age == "18 years or over") |> filter(Sex == "Female")
+  females_18_plus <- sum(temp$Num_Of_People, na.rm = TRUE)
+  
+  newlist <- data.frame(Country = c(country),
+                        males_17_or_less = c(males_17_minus),
+                        females_17_or_less = c(females_17_minus),
+                        males_18_plus = c(males_18_plus),
+                        females_18_plus = c(females_18_plus))
+  otherDF <- bind_rows(otherDF, newlist)
+}
+
+males_17_minus <-
+  finalDFTrafficking |> 
+  filter((Country == "United Kingdom of Great Britain and Northern Ireland") | 
+           (Country == "United States of America") |
+           (Country == "Argentina") | (Country == "Nigeria") | 
+           (Country == "Nepal") | (Country == "Australia")) |>
+  filter(Sex == "Male") |>
+  filter(Age == "0 to 17 years")
+males_18_plus <-
+  finalDFTrafficking |> 
+  filter((Country == "United Kingdom of Great Britain and Northern Ireland") | 
+           (Country == "United States of America") |
+           (Country == "Argentina") | (Country == "Nigeria") | 
+           (Country == "Nepal") | (Country == "Australia")) |>
+  filter(Sex == "Male") |>
+  filter(Age == "18 years or over")
+females_17_minus <-
+  finalDFTrafficking |> 
+  filter((Country == "United Kingdom of Great Britain and Northern Ireland") | 
+           (Country == "United States of America") |
+           (Country == "Argentina") | (Country == "Nigeria") | (Country == "Nepal") | 
+           (Country == "Australia")) |>
+  filter(Sex == "Female") |>
+  filter(Age == "0 to 17 years")
+females_18_plus <-
+  finalDFTrafficking |> 
+  filter((Country == "United Kingdom of Great Britain and Northern Ireland") | 
+           (Country == "United States of America") |
+           (Country == "Argentina") | (Country == "Nigeria") | (Country == "Nepal") | 
+           (Country == "Australia")) |>
+  filter(Sex == "Female") |>
+  filter(Age == "18 years or over")
+
+# Compare countries
+
+ggplot(males_17_minus, aes(x = Year, y= Num_Of_People, color = Country)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking over time") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  labs(title = "Male Victims 17 or Younger Over Time in Top Countries")
+ggplot(males_18_plus, aes(x = Year, y= Num_Of_People, color = Country)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking over time") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  labs(title = "Male Victims 18 or Older Over Time in Top Countries")
+ggplot(females_17_minus, aes(x = Year, y= Num_Of_People, color = Country)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking over time") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  labs(title = "Female Victims 17 or Younger Over Time in Top Countries")
+ggplot(females_18_plus, aes(x = Year, y= Num_Of_People, color = Country)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking over time") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  labs(title = "Female Victims 18 or Older Over Time in Top Countries")
+
+# Compare ages and genders
+
+uk <-
+  finalDFTrafficking |>
+  filter(Country == "United Kingdom of Great Britain and Northern Ireland") |>
+  filter((Age == "0 to 17 years") | (Age == "18 years or over"))
+usa <-
+  finalDFTrafficking |>
+  filter(Country == "United States of America") |>
+  filter((Age == "0 to 17 years") | (Age == "18 years or over"))
+argentina <-
+  finalDFTrafficking |>
+  filter(Country == "Argentina") |>
+  filter((Age == "0 to 17 years") | (Age == "18 years or over"))
+nigeria <-
+  finalDFTrafficking |>
+  filter(Country == "Nigeria") |>
+  filter((Age == "0 to 17 years") | (Age == "18 years or over"))
+nepal <-
+  finalDFTrafficking |>
+  filter(Country == "Nepal") |>
+  filter((Age == "0 to 17 years") | (Age == "18 years or over"))
+australia <-
+  finalDFTrafficking |>
+  filter(Country == "Australia") |>
+  filter((Age == "0 to 17 years") | (Age == "18 years or over"))
+```
+
+### Some interesting findings:
+
+In most countries, people ages 18 or older were trafficked the most. However, in Nigeria, males 17 or younger were victims more often than males 18 or older.
+
+In Nepal, the numbers of victims dramatically increased in 2020.
+
+In Australia, the number of victims ages 18 or older increased about 5 times the amount from 2015 to 2020.
+
+```{r plots-by-gender-age, fig.show="hold", out.width="50%"}
+
+uk1 <- ggplot(uk |> filter(Sex == "Male"), aes(x = Year, y= Num_Of_People, color = Age)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking of Males Over Time by Age in the UK (Britain and Ireland)") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+uk2 <- ggplot(uk |> filter(Sex == "Female"), aes(x = Year, y= Num_Of_People, color = Age)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking of Females Over Time by Age in the UK (Britain and Ireland)") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+us1 <- ggplot(usa |> filter(Sex == "Male"), aes(x = Year, y= Num_Of_People, color = Age)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking of Males Over Time by Age in the U.S.") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+us2 <- ggplot(usa |> filter(Sex == "Female"), aes(x = Year, y= Num_Of_People, color = Age)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking of Females Over Time by Age in the U.S.") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+arg1 <- ggplot(argentina |> filter(Sex == "Male"), aes(x = Year, y= Num_Of_People, color = Age)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking of Males Over Time by Age in Argentina") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+arg2 <- ggplot(argentina |> filter(Sex == "Female"), aes(x = Year, y= Num_Of_People, color = Age)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking of Females Over Time by Age in Argentina") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+ggplot(nigeria |> filter(Sex == "Male"), aes(x = Year, y= Num_Of_People, color = Age)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking of Males Over Time by Age in Nigeria") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+ggplot(nigeria |> filter(Sex == "Female"), aes(x = Year, y= Num_Of_People, color = Age)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking of Females Over Time by Age in Nigeria") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+ggplot(nepal |> filter(Sex == "Male"), aes(x = Year, y= Num_Of_People, color = Age)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking of Males Over Time by Age in Nepal") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+ggplot(nepal |> filter(Sex == "Female"), aes(x = Year, y= Num_Of_People, color = Age)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking of Females Over Time by Age in Nepal") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+ggplot(australia |> filter(Sex == "Male"), aes(x = Year, y= Num_Of_People, color = Age)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking of Males Over Time by Age in Australia") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+ggplot(australia |> filter(Sex == "Female"), aes(x = Year, y= Num_Of_People, color = Age)) +
+  geom_line(size = 0.5) +
+  ggtitle("Trafficking of Females Over Time by Age in Australia") + 
+  labs( x = "Year", y = "Number of Victims" ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Statistical Tests
+
+### T-tests
+
+### Linear Regression
+
+---
+
+### T-test - Comparing Males and Females
+
+Null Hypothesis: Males and females are victims of human trafficking in equal numbers.
+
+Alternate Hypothesis: Males and females are victims of human trafficking in different amounts.
+
+---
+
+### Results of Gender T-test
+
+P-value: < 0.05
+
+Result: Reject the null and accept the alternate hypothesis. Based on the means, females are victims significantly more than males.
+
+---
+
+### T-test - Comparing 17 and Younger to 18 and Older
+
+Null Hypothesis: People ages 17 or less and people ages 18 or more are victims of human trafficking in equal numbers.
+
+Alternate Hypothesis: People ages 17 or less and people ages 18 or more are victims of human trafficking in different amounts.
+
+---
+
+### Results of Age T-test
+
+P-value: < 0.05
+
+Result: Reject the null and accept the alternate hypothesis. Based on the means, people ages 18 or more are victims significantly more than people ages 17 or less.
+
+---
+
+### Code for T-tests
+
+```{r t-tests}
+# Compare Male vs Female
+bothGenders <- finalDFTrafficking |> filter((Sex == "Male") | (Sex == "Female"))
+t.test(Num_Of_People ~ Sex, data = bothGenders)
+
+# Compare 17 or less vs 18 or more
+separateAges <- finalDFTrafficking |> filter((Age == "0 to 17 years") | (Age == "18 years or over"))
+t.test(Num_Of_People ~ Age, data = separateAges)
+```
+
+---
+
+### Linear Regression - All Countries
+
+In the first model, all countries are used based on gender, age, and year. This model is an equation that should predict the average number of people in trafficking for all countries of the world. Since countries have many differences, this model was expected to be inaccurate. Many other factors than gender, age, and year affect the number of victims for all those countries.
+
+Results: The R squared value of 0.04019. This shows the model is horrible at predicting outcomes since it is extremely close to 0. It does not take into account the differences between countries.
+
+```{r predict-totals-a}
+
+# Based on age, gender, and year
+
+finalDFTrafficking$yearsFrom2003 <- finalDFTrafficking$Year - 2003
+bothSets <- 
+  finalDFTrafficking |> 
+  filter((Sex == "Male") | (Sex == "Female")) |>
+  filter((Age == "0 to 17 years") | (Age == "18 years or over"))
+fitAll <- lm(Num_Of_People ~ Sex + Age + yearsFrom2003, data = bothSets)
+summary(fitAll)
+
+```
+
+---
+
+The equation created from the regression:
+
+y = 32.0232 - 28.8344(male) + 33.8895(18 or over) + 0.9351(years from 2003)
+
+---
+
+ Guess the totals for the following scenarios:
+ 
+1. Males 18 years or more in the year 2023
+
+```{r one-a}
+32.0232 - 28.8344 + 33.8895 + (0.9351 * 20)
+```
+
+
+2. Females 17 years or less in the year 2025
+
+```{r two-a}
+32.0232 - (28.8344 * 0) + (33.8895 * 0) + (0.9351 * 22)
+```
+
+
+3. Males 17 years or less in the year 2025
+
+```{r three-a}
+32.0232 - 28.8344 + (33.8895 * 0) + (0.9351 * 22)
+```
+
+4. Females 18 years or more in the year 2023
+
+```{r four-a}
+32.0232 - (28.8344 * 0) + 33.8895 + (0.9351 * 20)
+```
+
+---
+
+### Findings:
+
+In each of the scenarios, the estimate is a guess for the average number of people in human trafficking. It would be like looking at one country. If those numbers were correct, imagine those numbers times the number of countries in the world (about 195). Population size of a country, issues with law enforcement, poverty rates, and more along with the factors considered here would affect the number. Also, remember that the number of people known to be victims of human trafficking is lower than the true numbers. We cannot know the actual number because many people who are victims are unknown and not accounted for in the total.
+
+---
+
+### Linear Regression - United States
+
+In this other linear regression, the predictions are repeated for only the United States. 
+
+Results: The R squared value is now 0.4143. This shows the model is still not a very strong predictor, but it has much more predictive value than the previous model created.
+
+```{r predict-totals-b}
+
+# Based on age, gender, and year
+
+finalDFTrafficking$yearsFrom2003 <- finalDFTrafficking$Year - 2003
+bothSets3 <- 
+  finalDFTrafficking |>
+  filter(Country == "United States of America") |>
+  filter((Sex == "Male") | (Sex == "Female")) |>
+  filter((Age == "0 to 17 years") | (Age == "18 years or over"))
+fitAll2 <- lm(Num_Of_People ~ Sex + Age + yearsFrom2003, data = bothSets3)
+summary(fitAll2)
+
+```
+
+---
+
+The equation created from the regression:
+
+y = -88.74 - 170.15(male) + 379.22(18 or over) + 28.69(years from 2003)
+
+---
+
+ Guess the totals for the following scenarios:
+ 
+1. Males 18 years or more in the year 2023
+```{r one-b}
+-88.74 - 170.15 + 379.22 + (28.69 * 20)
+```
+
+
+2. Females 17 years or less in the year 2025
+
+```{r two-b}
+-88.74 - (170.15 * 0) + (379.22 * 0) + (28.69 * 22)
+```
+
+
+3. Males 17 years or less in the year 2025
+
+```{r three-b}
+-88.74 - 170.15 + (379.22 * 0) + (28.69 * 22)
+```
+
+4. Females 18 years or more in the year 2023
+
+```{r four-b}
+-88.74 - (170.15 * 0) + 379.22 + (28.69 * 20)
+```
+
+---
+
+### Findings:
+
+In each of those four scenarios, the estimate is a guess for the number of people in human trafficking in only the United States. It is much closer to the actual numbers based on the R squared value. Data for 2023 was not published to the website yet, and data for 2025 will not be available for at least a few years.
+
+## Conclusion
+  
+Based on my findings, females and people older than 18 years old are at the highest risk of being victims of human trafficking. In the United States, my model predicted that about 28 to 29 new people become victims every year. This estimate is less than the true number, but it demonstrates the average increase over time. Based on many graphs, numbers have increased more rapidly in recent years. The analysis performed on this data is important because it shows the extent of the issue, and it shows how different groups of people are affected differently. I also hope this encourages you to be aware of this problem so you can take action, whether that includes being aware of your surroundings if this is happening around you or joining the cause to bring an end to trafficking. Lastly, a lot of traffickers are caught, but the victims are still enslaved. If you are in the field of law or hospitality or health care, it is important to be aware of this so you can make change. You have the power to save people.
+
+One limitation is that not all the data was collected. Many more people are in trafficking than we know because the traffickers want to keep it secret. They do not want people to know about what they are doing. It is bad for business, as awful as that sounds, and they don't want to go to jail or be prosecuted in any way. Another limitation is that the data was not collected the same for all countries. Some places showed information by age. Some showed information by gender. Some showed information by the type of trafficking - forced labor or commercial sex. As a result, some of the comparisons could not be done for all countries.
+
+## Sources
+
+https://dataunodc.un.org/dp-trafficking-persons
+
+This source is the website where I got all the data.
+
+https://stackoverflow.com/questions/71858134/create-ggplot2-map-in-r-using-count-by-country
+
+The source above helped guide me in creating the maps.
+
+https://www.worldometers.info/geography/how-many-countries-are-there-in-the-world/
+
+This source showed the number of countries.
+
+https://www.state.gov/humantrafficking-about-human-trafficking/
+
+This source provides more details about human trafficking.
